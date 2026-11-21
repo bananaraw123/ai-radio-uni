@@ -46,6 +46,7 @@ const ICON = {
   book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20h13a1.5 1.5 0 0 0 1.5-1.5V15"/></svg>',
   moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',
+  phones: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="5" height="7" rx="2"/><rect x="16" y="14" width="5" height="7" rx="2"/></svg>',
   radio: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="m7 8 9-5"/><circle cx="15.5" cy="14" r="2.6"/><path d="M6.5 12.5h4M6.5 15.5h4"/></svg>'
 };
 
@@ -145,6 +146,19 @@ const totalSec = () => Object.values(S.logs).reduce((a, b) => a + b, 0);
 
 /* ================= 学部の印を画像に（ロック画面・車のディスプレイ用） ================= */
 const artCache = new Map();
+/* ロック画面・車の画面に出すジャケット画像：教授キャラをPNGにする */
+function avatarPNG(f) {
+  const key = 'avapng' + f.id + f.color;
+  if (artCache.has(key)) return Promise.resolve(artCache.get(key));
+  return new Promise(res => {
+    try {
+      const img = new Image();
+      img.onload = () => { try { const c = document.createElement('canvas'); c.width = c.height = 512; c.getContext('2d').drawImage(img, 0, 0, 512, 512); const u = c.toDataURL('image/png'); artCache.set(key, u); res(u); } catch { res(''); } };
+      img.onerror = () => res('');
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(avatarSVG(f).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" '));
+    } catch { res(''); }
+  });
+}
 function sealArt(f) {
   if (artCache.has(f.id + f.color + f.seal)) return artCache.get(f.id + f.color + f.seal);
   let url = '';
@@ -160,7 +174,37 @@ function sealArt(f) {
   artCache.set(f.id + f.color + f.seal, url); return url;
 }
 function roundRect(g, x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
-const sealHTML = (f, size = '') => `<span class="seal ${size}" style="--c:${esc(f.color)}" aria-hidden="true">${esc(f.seal)}</span>`;
+/* 教授のキャラクター（丸・角の丸い四角だけで描く。色は少なく、表情は笑顔） */
+const INK = '#2b2347', SKIN = '#ffe1c7';
+const RADIO_SVG = `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="50" fill="#5b6cff"/><rect x="58" y="16" width="5" height="22" rx="2.5" fill="#ffd34d" transform="rotate(30 60 27)"/><circle cx="68" cy="15" r="5" fill="#ffd34d"/>
+  <rect x="20" y="36" width="60" height="40" rx="14" fill="#fff"/><circle cx="62" cy="56" r="11" fill="#ff6b3d"/><circle cx="62" cy="56" r="4.5" fill="#fff"/><rect x="29" y="47" width="18" height="5" rx="2.5" fill="#d9d3f5"/><rect x="29" y="57" width="18" height="5" rx="2.5" fill="#d9d3f5"/>
+  <path d="M37 66q3 3 6 0" stroke="${INK}" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>`;
+const EYES = `<path d="M39 47q4-4 8 0M53 47q4-4 8 0" stroke="${INK}" stroke-width="2.8" fill="none" stroke-linecap="round"/>`;
+const FACE_BASE = `<circle cx="37" cy="54" r="3.4" fill="#ff9aa8" opacity=".7"/><circle cx="63" cy="54" r="3.4" fill="#ff9aa8" opacity=".7"/><path d="M45 57q5 5 10 0" stroke="${INK}" stroke-width="2.6" fill="none" stroke-linecap="round"/>`;
+const AVA = {
+  ai: { shirt: '#ffffff', back: `<path d="M27 46q0-26 23-26t23 26q-7-12-23-12t-23 12z" fill="#3b3557"/>`,
+        front: `<circle cx="43" cy="47" r="7" fill="none" stroke="${INK}" stroke-width="2.4"/><circle cx="57" cy="47" r="7" fill="none" stroke="${INK}" stroke-width="2.4"/><path d="M50 47h0" stroke="${INK}" stroke-width="2.4"/><rect x="45" y="78" width="10" height="10" rx="3" fill="#4f8cff"/>`, eyes: `<circle cx="43" cy="47" r="2" fill="${INK}"/><circle cx="57" cy="47" r="2" fill="${INK}"/>` },
+  space: { shirt: '#fff4c9', back: `<path d="M24 50q0-30 26-30t26 30v22q-6 4-10 0V44q-6-10-16-10t-16 10v28q-4 4-10 0z" fill="#5a3e8c"/>`,
+        front: `<circle cx="70" cy="28" r="6" fill="#ffd34d"/><ellipse cx="70" cy="28" rx="11" ry="3.4" fill="none" stroke="#ffd34d" stroke-width="2.2"/>` },
+  philo: { shirt: '#e9e4ff', back: `<circle cx="29" cy="42" r="6" fill="#d8d3e6"/><circle cx="71" cy="42" r="6" fill="#d8d3e6"/>`,
+        front: `<path d="M34 58q16 22 32 0q-4 10-16 10t-16-10z" fill="#e8e3f2"/>` },
+  psy: { shirt: '#ffe2ec', back: `<path d="M26 50q0-28 24-28t24 28v8q-5 2-8-2V40q-6-8-16-8t-16 8v16q-3 4-8 2z" fill="#8a4b3b"/>`,
+        front: `<circle cx="66" cy="26" r="5" fill="#ff6b8b"/><circle cx="74" cy="30" r="5" fill="#ff6b8b"/>` },
+  myst: { shirt: '#4b2e7a', back: `<path d="M20 74q0-50 30-56q30 6 30 56z" fill="#4b2e7a"/>`,
+        front: `<circle cx="66" cy="30" r="5" fill="#ffe17a"/><circle cx="68.5" cy="28" r="4.5" fill="#4b2e7a"/>` },
+  relig: { shirt: '#c98a3a', back: '',
+        front: `<g fill="#6b3f1d">${[30, 38, 46, 54, 62, 70].map((x, i) => `<circle cx="${x}" cy="${78 + Math.abs(i - 2.5) * -1.6 + 4}" r="2.6"/>`).join('')}</g>` },
+  econ: { shirt: '#ffffff', back: `<path d="M27 44q0-24 23-24t23 24q-3-8-12-10q-14 6-34 10z" fill="#2f2a2a"/>`,
+        front: `<circle cx="44" cy="80" r="4" fill="#ff6b3d"/><circle cx="56" cy="80" r="4" fill="#ff6b3d"/><circle cx="50" cy="80" r="2.6" fill="#d9481e"/>` },
+  hist: { shirt: '#f4e3c8', back: `<rect x="27" y="18" width="46" height="12" rx="6" fill="#7a4a2a"/><rect x="34" y="10" width="32" height="14" rx="6" fill="#7a4a2a"/>`,
+        front: `<path d="M41 55q9-5 18 0q-9 3-18 0z" fill="#7a4a2a"/>` }
+};
+function avatarSVG(f) {
+  const a = AVA[f.id] || { shirt: '#ffffff', back: '', front: `<text x="50" y="86" text-anchor="middle" font-size="13" font-weight="700" fill="${INK}">${esc(f.seal)}</text>` };
+  return `<svg viewBox="0 0 100 100" aria-hidden="true"><circle cx="50" cy="50" r="50" fill="${esc(f.color)}"/>${a.back}
+    <path d="M16 104q0-32 34-32t34 32z" fill="${a.shirt}"/><circle cx="50" cy="48" r="22" fill="${SKIN}"/>${a.eyes || EYES}${FACE_BASE}${a.front}</svg>`;
+}
+const sealHTML = (f, size = '') => `<span class="ava ${size}">${avatarSVG(f)}</span>`;
 
 /* ================= チャイム（Web Audio） ================= */
 const Chime = {
@@ -350,8 +394,8 @@ const Player = {
   },
   async closing() {
     this.program = null; await this.stopEngines(); this.sync();
-    await this.announce(async () => { await Chime.play('open'); if (S.settings.announcer) await Voice.say('本日のドライブ番組は、ここまでです。お疲れさまでした。どうぞ、安全運転で。', { rate: 1.05 }); });
-    this.cur = null; this.mode = null; this.sync(); toast('ドライブ番組が終わりました。お疲れさまでした', { ms: 5000 }); render(true);
+    await this.announce(async () => { await Chime.play('open'); if (S.settings.announcer) await Voice.say('本日の番組は、ここまでです。お疲れさまでした。', { rate: 1.05 }); });
+    this.cur = null; this.mode = null; this.sync(); toast('番組が終わりました。お疲れさまでした', { ms: 5000 }); render(true);
   },
   prev() {
     if (this.pos() > 6 || this.qi <= 0) { this.mode === 'audio' ? (this.audio.currentTime = 0) : Speech.seekTo(0); this.sync(); return; }
@@ -360,7 +404,7 @@ const Player = {
   finished() {
     if (!this.cur) return;
     markDone(this.cur);
-    if (this.sleepEnd) { this.sleepEnd = false; this.stopEngines(); this.sync(); toast('講義の終わりで停止しました。おやすみなさい'); return; }
+    if (this.sleepEnd) { this.sleepEnd = false; this.stopEngines(); this.sync(); Bedtime.off(); toast('講義の終わりで停止しました。おやすみなさい'); return; }
     this.next();
   },
   tick() {
@@ -391,6 +435,7 @@ const Player = {
     try {
       navigator.mediaSession.metadata = new MediaMetadata({ title: l.title, artist: profName(l) || f.name, album: `${f.name}｜AIラジオ大学`, artwork: art ? [{ src: art, sizes: '512x512', type: 'image/png' }] : [] });
     } catch {}
+    avatarPNG(f).then(u => { if (!u || this.cur !== l) return; try { navigator.mediaSession.metadata.artwork = [{ src: u, sizes: '512x512', type: 'image/png' }]; } catch {} });
   },
   media() {
     if (!('mediaSession' in navigator)) return;
@@ -436,7 +481,7 @@ function radioQueue(fid = 'all', exclude = null) {
   return out.slice(0, 12).map(l => l.id);
 }
 
-/* ドライブ番組：到着時間にぴったり収まるように講義を選ぶ（0/1ナップサック） */
+/* 時間ぴったり番組：決めた時間にぴったり収まるように講義を選ぶ（0/1ナップサック） */
 const ANN_SEC = () => (S.settings.announcer ? 10 : 3);
 function lectRemain(l) { const d = lectDuration(l); return status(l) === 'doing' ? d * (1 - lectPct(l)) : d; }
 function planProgram(minutes, fid = 'all') {
@@ -469,7 +514,7 @@ function programSheet(minutes, fid = S.station || 'all') {
   const body = plan.ids.length
     ? `<div class="list">${plan.ids.map(id => rowHTML(lect(id))).join('')}</div>`
     : `<div class="card empty"><span class="em-title">${minutes}分に収まる講義がありません</span><span class="small">時間を長くするか、ダイヤルで「総合」を選んでみてください。</span></div>`;
-  openSheet(`<div class="sheet-head"><div class="sh-main"><p class="eyebrow">Drive Program · ${esc(st.freq)} ${esc(st.short)}</p><h2>${minutes}分のドライブ番組</h2>
+  openSheet(`<div class="sheet-head"><div class="sh-main"><p class="eyebrow">Drive Program · ${esc(st.freq)} ${esc(st.short)}</p><h2>${minutes}分の番組</h2>
     <p class="small muted">${plan.ids.length ? `${plan.ids.length}講義 · 約${fmt(plan.total)}（到着の${fmt(Math.max(0, minutes * 60 - plan.total))}前に終わります）` : ''}</p></div></div>
     ${plan.ids.length && minutes * 60 - plan.total > 180 ? `<p class="hint">登録されている講義では${minutes}分を埋めきれませんでした。講義を増やすと、ぴったりに近づきます。</p>` : ''}
     ${body}
@@ -478,6 +523,24 @@ function programSheet(minutes, fid = S.station || 'all') {
       <button class="btn ghost" data-act="plan" data-min="${minutes}" data-fac="${fid}">組み直す</button></div>` : ''}`, 'program');
 }
 const MINUTE_CHOICES = [10, 15, 20, 30, 45, 60];
+
+function sceneSheet(kind) {
+  if (kind === 'nagara') {
+    openSheet(`<div class="sheet-head">${''}<div class="sh-main"><p class="eyebrow">ながら聴き</p><h2>何分くらい聴く？</h2><p class="small muted">その時間にぴったり収まるように、講義を組みます（ダイヤルで選んだ局から）。</p></div></div>
+      <div class="opt-grid">${[15, 30, 45, 60].map(m => `<button class="opt" data-act="plan" data-min="${m}"><b class="num">${m}</b>分</button>`).join('')}
+      <button class="opt wide" data-act="radio" data-fac="${S.station || 'all'}">時間を決めずに聴く</button></div>`, 'scene');
+  } else {
+    openSheet(`<div class="sheet-head"><div class="sh-main"><p class="eyebrow">寝る前</p><h2>おやすみタイマー</h2><p class="small muted">画面が暗くなり、最後の2分で音をゆっくり小さくしてから止まります。</p></div></div>
+      <div class="opt-grid">${[15, 30, 60].map(m => `<button class="opt" data-act="sleepstart" data-min="${m}"><b class="num">${m}</b>分</button>`).join('')}
+      <button class="opt" data-act="sleepstart" data-min="end"><b style="font-size:15px">講義の終わり</b></button></div>`, 'scene');
+  }
+}
+/* 寝る前モード：一時的に夜の配色にして、終わったら元に戻す */
+const Bedtime = {
+  prev: null, active: false,
+  on() { if (this.active) return; this.active = true; this.prev = document.documentElement.getAttribute('data-theme'); document.documentElement.setAttribute('data-theme', 'dark'); },
+  off() { if (!this.active) return; this.active = false; if (this.prev) document.documentElement.setAttribute('data-theme', this.prev); else applyTheme(); Player.audio.volume = 1; }
+};
 
 function markDone(l, silent) {
   const p = S.progress[l.id] || {}; if (p.done) return;
@@ -495,7 +558,11 @@ function markDone(l, silent) {
 /* 聴講時間の記録（実際に再生していた秒数だけ） */
 setInterval(() => {
   if (Player.cur && Player.playing() && !Player.announcing) { const k = dayKey(); S.logs[k] = (S.logs[k] || 0) + 1; save.logs(); }
-  if (Player.sleepAt && Date.now() >= Player.sleepAt) { Player.sleepAt = 0; Player.pause(); toast('スリープタイマーで停止しました'); updatePlayerSheet(); }
+  if (Player.sleepAt) {
+    const rem = (Player.sleepAt - Date.now()) / 1000;
+    if (rem <= 120 && Player.mode === 'audio') Player.audio.volume = clamp(rem / 120, 0, 1);
+    if (rem <= 0) { Player.sleepAt = 0; Player.pause(); Player.audio.volume = 1; Bedtime.off(); toast('おやすみタイマーで止まりました'); updatePlayerSheet(); }
+  }
   if (Player.mode === 'speech') updateProgressUI();
   if (Drive.open) { const c = $('#dClock'); if (c) c.textContent = new Date().toTimeString().slice(0, 5); const lf = $('#dLeft'); if (lf) lf.textContent = programLeft() != null ? `到着まで あと${programLeft()}分` : ''; }
 }, 1000);
@@ -577,9 +644,9 @@ function viewHome() {
         <span class="hc-main"><span class="hc-label">続きから</span><span class="hc-title">${esc(doing.title)}</span>
         <span class="hc-sub">${esc(profName(doing))} · 残り ${fmt(lectDuration(doing) * (1 - lectPct(doing)))}</span>
         <span class="bar"><i style="width:${lectPct(doing) * 100}%"></i></span></span><span class="hero-play" aria-hidden="true">${ICON.play}</span></button>`
-    : `<button class="hero-card" id="heroRadio" data-act="radio" data-fac="all"><span class="seal lg" style="--c:var(--accent);color:var(--accent-ink)" aria-hidden="true">放</span>
+    : `<button class="hero-card" id="heroRadio" data-act="radio" data-fac="all"><span class="ava lg">${RADIO_SVG}</span>
         <span class="hc-main"><span class="hc-label">ラジオを始める</span><span class="hc-title" id="heroTitle">全学部から、自動で番組を組みます</span>
-        <span class="hc-sub" id="heroSub">${S.lectures.length}講義（未聴講 ${unheard}）</span></span><span class="hero-play" aria-hidden="true">${ICON.play}</span></button>`;
+        <span class="hc-sub" id="heroSub">${S.lectures.length}講義・未聴講${unheard}</span></span><span class="hero-play" aria-hidden="true">${ICON.play}</span></button>`;
   return `
   <section class="home-hero">
     <p class="eyebrow">${new Date().toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}</p>
@@ -588,8 +655,11 @@ function viewHome() {
     <p class="home-stats">今日 <b class="num">${Math.floor(today / 60)}</b>分 ・ 連続 <b class="num">${sk}</b>日 ・ <b class="num">${cr}</b>単位</p>
   </section>
 
-  <section class="drive-row"><button class="dr-label" data-act="drive" aria-label="ドライブモード">${ICON.car}ドライブ</button>
-    ${MINUTE_CHOICES.filter(m => m >= 15).map(m => `<button class="dr-chip" data-act="plan" data-min="${m}"><b class="num">${m}</b>分</button>`).join('')}</section>
+  <section class="scene-grid" aria-label="聴き方を選ぶ">
+    <button class="scene sc-nagara" data-act="scene" data-scene="nagara"><span class="sc-ico">${ICON.phones}</span>ながら<small>時間ぴったり</small></button>
+    <button class="scene sc-sleep" data-act="scene" data-scene="sleep"><span class="sc-ico">${ICON.moon}</span>寝る前<small>ゆっくり止まる</small></button>
+    <button class="scene sc-move" data-act="drive"><span class="sc-ico">${ICON.car}</span>移動中<small>大きなボタン</small></button>
+  </section>
 
   <section class="tuner" aria-label="チューニングダイヤル">
     <div class="tuner-head"><span class="eyebrow">局を選ぶ · FM</span><span class="small muted">ダイヤルを左右に</span></div>
@@ -629,7 +699,7 @@ function tunerInfo() {
   if (hero) { // 何も聴きかけていないときは、大きなボタンが選んだ局の放送になる
     hero.dataset.fac = st.id;
     $('#heroTitle').textContent = st.id === 'all' ? '全学部から、自動で番組を組みます' : `${st.name}の放送`;
-    $('#heroSub').textContent = `${st.freq} MHz · ${ls.length}講義（未聴講 ${unheard}）`;
+    $('#heroSub').textContent = `${st.freq}MHz・${ls.length}講義・未聴講${unheard}`;
   }
   $('#tunerInfo').innerHTML = `<div class="ti-main"><div class="ti-name"><span class="num" style="color:var(--accent)">${st.freq}</span> ${esc(st.name)}</div>
     <div class="ti-sub">${esc(st.sub)} · ${ls.length}講義</div></div>
@@ -1098,7 +1168,7 @@ function renderMini() {
   m.hidden = !l; document.body.classList.toggle('no-mini', !l);
   if (!l) { m.innerHTML = `<button class="m-open" data-act="radio" data-fac="all"><span class="seal sm" style="--c:var(--accent);color:var(--accent-ink)">放</span><span class="m-main"><span class="m-title">AIラジオ大学 総合放送</span><span class="m-sub">タップで放送開始 · 全学部から自動編成</span></span></button><button class="m-btn main" data-act="radio" data-fac="all" aria-label="放送開始">${ICON.play}</button><button class="m-btn" data-act="drive" aria-label="ドライブモード">${ICON.car}</button>`; return; }
   const f = fac(l.facultyId);
-  m.innerHTML = `<button class="m-open" data-act="fullplayer">${sealHTML(f, 'sm')}<span class="m-main"><span class="m-title">${esc(l.title)}</span><span class="m-sub">${Player.announcing ? 'ON AIR · 番組紹介中' : esc((Player.program ? `ドライブ番組 残り${programLeft()}分 · ` : '') + f.name + ' · ' + profName(l))}</span></span></button>
+  m.innerHTML = `<button class="m-open" data-act="fullplayer">${sealHTML(f, 'sm')}<span class="m-main"><span class="m-title">${esc(l.title)}</span><span class="m-sub">${Player.announcing ? 'ON AIR · 番組紹介中' : esc((Player.program ? `番組 残り${programLeft()}分 · ` : '') + f.name + ' · ' + profName(l))}</span></span></button>
     <button class="m-btn" data-act="back" aria-label="戻る">${ICON.back}</button>
     <button class="m-btn main" data-act="toggle" aria-label="再生・一時停止">${Player.playing() ? ICON.pause : ICON.play}</button>
     <button class="m-btn" data-act="drive" aria-label="ドライブモード">${ICON.car}</button><span class="m-prog" id="mProg"></span>`;
@@ -1203,10 +1273,19 @@ document.addEventListener('click', async e => {
       const idx = cur === 'end' ? 4 : cur === 0 ? 0 : cur <= 15 ? 1 : cur <= 30 ? 2 : 3;
       const nx = steps[(idx + 1) % steps.length];
       Player.sleepEnd = nx === 'end'; Player.sleepAt = typeof nx === 'number' && nx ? Date.now() + nx * 60000 : 0;
+      if (nx === 0) Bedtime.off();
       toast(nx === 0 ? 'スリープタイマーを解除しました' : nx === 'end' ? 'この講義が終わったら停止します' : `${nx}分後に停止します`);
       updatePlayerSheet(); break;
     }
     case 'drive': closeSheet(); Drive.show(); break;
+    case 'scene': sceneSheet(el.dataset.scene); break;
+    case 'sleepstart': {
+      Player.unlock(); closeSheet(); const m = el.dataset.min;
+      if (!Player.cur) { const ids = radioQueue(S.station || 'all'); if (!ids.length) { toast('聴ける講義がありません'); break; } Player.start(ids, 0, { radio: true, radioFac: S.station || 'all' }); }
+      else if (!Player.playing()) Player.play();
+      Player.sleepEnd = m === 'end'; Player.sleepAt = m === 'end' ? 0 : Date.now() + (+m) * 60000;
+      Bedtime.on(); toast(m === 'end' ? 'この講義が終わったら止まります。おやすみなさい' : `${m}分後、音を小さくしながら止まります。おやすみなさい`, { ms: 4000 }); break;
+    }
     case 'plan': programSheet(+el.dataset.min, el.dataset.fac || S.station || 'all'); break;
     case 'startprog': {
       Player.unlock(); const ids = el.dataset.ids.split(','), m = +el.dataset.min, drive = el.dataset.drive;

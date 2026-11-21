@@ -1,39 +1,31 @@
-/* AIラジオ大学 — 深夜の講堂 × 真空管ラジオ
+/* AIラジオ大学 — ポップなキャンパス × ラジオ（教授はイラストのキャラクター）
    Layout: 720px の一本柱。下に常駐プレイヤーとナビ、ホームの主役はチューニングダイヤル。 */
 :root {
-  --bg: #0d1220;        /* 夜のインク */
-  --surface: #151c2f;   /* 講堂の机 */
-  --surface-2: #1c2540;
-  --line: #2a3452;
-  --fg: #ece5d6;        /* 古い紙の白 */
-  --muted: #98a1b9;
-  --accent: #f2a93b;    /* 真空管の琥珀 */
-  --accent-ink: #1d1304;
-  --accent-soft: rgba(242, 169, 59, .14);
-  --onair: #ff5d4f;     /* ON AIR ランプ */
-  --ok: #6cc788;
-  --shadow: 0 10px 30px rgba(0, 0, 0, .35);
-  --f-display: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Noto Serif CJK JP", "Source Han Serif JP", serif;
+  /* 夜（寝る前・ダーク）：深い藍色のキャンパス */
+  --bg: #16132f; --surface: #1f1b3f; --surface-2: #29244f; --line: #363062;
+  --fg: #f4f1ff; --muted: #aba6cf; --accent: #ff8a5c; --accent-ink: #24110a;
+  --accent-soft: rgba(255, 138, 92, .16); --accent-2: #8f9bff; --onair: #ff5f7e; --ok: #3fd39b;
+  --shadow: 0 12px 32px rgba(0, 0, 0, .35);
+  --f-display: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "BIZ UDPGothic", "Hiragino Sans", "Noto Sans JP", "Meiryo", system-ui, sans-serif;
   --f-body: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Noto Sans CJK JP", "Yu Gothic UI", "Meiryo", system-ui, sans-serif;
   --f-mono: ui-monospace, "SF Mono", "Menlo", "Consolas", monospace;
-  --r: 14px;
-  --nav-h: 64px;
-  --mini-h: 66px;
+  --r: 18px; --nav-h: 64px; --mini-h: 66px;
   color-scheme: dark;
 }
+/* 昼（ポップ）：ラベンダーの白に、タンジェリンとブルー */
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #eceff5; --surface: #ffffff; --surface-2: #f4f6fa; --line: #d5dae6;
-    --fg: #161d31; --muted: #586178; --accent: #b56400; --accent-ink: #ffffff;
-    --accent-soft: rgba(181, 100, 0, .1); --onair: #d63a2c; --ok: #2f8a4a;
-    --shadow: 0 8px 24px rgba(20, 30, 60, .12); color-scheme: light;
+    --bg: #f6f4ff; --surface: #ffffff; --surface-2: #efebff; --line: #e3ddf8;
+    --fg: #231f47; --muted: #6c6890; --accent: #ff6b3d; --accent-ink: #ffffff;
+    --accent-soft: rgba(255, 107, 61, .12); --accent-2: #5b6cff; --onair: #ff4f6d; --ok: #17a874;
+    --shadow: 0 10px 28px rgba(70, 50, 160, .12); color-scheme: light;
   }
 }
 :root[data-theme="light"] {
-  --bg: #eceff5; --surface: #ffffff; --surface-2: #f4f6fa; --line: #d5dae6;
-  --fg: #161d31; --muted: #586178; --accent: #b56400; --accent-ink: #ffffff;
-  --accent-soft: rgba(181, 100, 0, .1); --onair: #d63a2c; --ok: #2f8a4a;
-  --shadow: 0 8px 24px rgba(20, 30, 60, .12); color-scheme: light;
+  --bg: #f6f4ff; --surface: #ffffff; --surface-2: #efebff; --line: #e3ddf8;
+  --fg: #231f47; --muted: #6c6890; --accent: #ff6b3d; --accent-ink: #ffffff;
+  --accent-soft: rgba(255, 107, 61, .12); --accent-2: #5b6cff; --onair: #ff4f6d; --ok: #17a874;
+  --shadow: 0 10px 28px rgba(70, 50, 160, .12); color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -389,3 +381,30 @@ main { gap: 30px; }
 body.no-mini { padding-bottom: calc(var(--nav-h) + 24px + env(safe-area-inset-bottom, 0px)); }
 button.dr-label { background: none; border: 0; padding: 0 4px 0 0; color: var(--fg); }
 .tuner-info { padding: 12px 16px 14px; }
+
+/* ---------- 2026-11 ポップ版：教授キャラ・シーン ---------- */
+.ava { flex: none; display: inline-block; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; }
+.ava svg { width: 100%; height: 100%; }
+.ava.sm { width: 40px; height: 40px; }
+.ava.lg { width: 72px; height: 72px; }
+.ava.xl { width: min(56vw, 230px); height: min(56vw, 230px); box-shadow: var(--shadow); }
+.ss-item .ava { width: 56px; height: 56px; }
+h1, h2, h3, .hc-title, .row-title, .p-title, .d-title { letter-spacing: .01em; }
+.hero-card { border-radius: 28px; }
+.scene-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.scene { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 96px; border: 0; border-radius: 22px;
+  background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); font-family: var(--f-display); font-weight: 700; font-size: 15px; color: var(--fg); }
+.scene small { font-family: var(--f-body); font-weight: 400; font-size: 11px; color: var(--muted); }
+.scene .sc-ico { width: 40px; height: 40px; border-radius: 14px; display: grid; place-items: center; color: #fff; }
+.scene .sc-ico svg { width: 22px; height: 22px; }
+.scene:active { transform: scale(.97); }
+.sc-nagara .sc-ico { background: var(--accent-2); }
+.sc-sleep .sc-ico { background: #8b5cf6; }
+.sc-move .sc-ico { background: var(--accent); }
+.opt-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.opt { min-height: 64px; border-radius: 18px; border: 0; background: var(--surface-2); font-size: 13px; color: var(--muted); }
+.opt b { font-size: 22px; color: var(--fg); margin-right: 2px; }
+.opt.wide { grid-column: 1 / -1; font-size: 15px; color: var(--fg); font-weight: 700; }
+.list, .card, .tuner, .feature { border-radius: 22px; }
+.btn { border-radius: 999px; }
+.nav button.on svg { transform: translateY(-1px); }

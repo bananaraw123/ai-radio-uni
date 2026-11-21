@@ -13,3 +13,7 @@
 ローカル確認：`python3 -m http.server` → http://localhost:8000
 
 データ（MP3含む）は各端末のブラウザ内（IndexedDB）に保存されます。
+
+## 講義の音声化（無料・Irodori-TTS）
+`tools/irodori_voice.ipynb` をGoogle Colabで開き、①〜④を順に実行すると、Googleドライブの制作ボードで「音声化待ち」の講義をMP3にします。
+https://colab.research.google.com/github/bananaraw123/ai-radio-uni/blob/main/tools/irodori_voice.ipynb

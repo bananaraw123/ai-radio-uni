@@ -196,6 +196,10 @@ const AVA = {
         front: `<g fill="#6b3f1d">${[30, 38, 46, 54, 62, 70].map((x, i) => `<circle cx="${x}" cy="${78 + Math.abs(i - 2.5) * -1.6 + 4}" r="2.6"/>`).join('')}</g>` },
   econ: { shirt: '#ffffff', back: `<path d="M27 44q0-24 23-24t23 24q-3-8-12-10q-14 6-34 10z" fill="#2f2a2a"/>`,
         front: `<circle cx="44" cy="80" r="4" fill="#ff6b3d"/><circle cx="56" cy="80" r="4" fill="#ff6b3d"/><circle cx="50" cy="80" r="2.6" fill="#d9481e"/>` },
+  food: { shirt: '#ffffff', back: `<rect x="30" y="8" width="40" height="22" rx="11" fill="#ffffff"/><circle cx="36" cy="14" r="9" fill="#ffffff"/><circle cx="64" cy="14" r="9" fill="#ffffff"/><circle cx="50" cy="10" r="10" fill="#ffffff"/>`,
+        front: `<rect x="60" y="78" width="14" height="12" rx="4" fill="#7a4a2a"/><path d="M74 81q5 0 5 4t-5 4" stroke="#7a4a2a" stroke-width="2.4" fill="none"/>` },
+  lang: { shirt: '#e4fbfd', back: `<path d="M25 48q0-28 25-28t25 28q-2 10-6 14v-18q-8-10-19-10t-19 10v18q-4-4-6-14z" fill="#3b2b5a"/>`,
+        front: `<rect x="64" y="18" width="26" height="16" rx="8" fill="#ffffff"/><circle cx="71" cy="26" r="2" fill="${INK}"/><circle cx="77" cy="26" r="2" fill="${INK}"/><circle cx="83" cy="26" r="2" fill="${INK}"/>` },
   hist: { shirt: '#f4e3c8', back: `<rect x="27" y="18" width="46" height="12" rx="6" fill="#7a4a2a"/><rect x="34" y="10" width="32" height="14" rx="6" fill="#7a4a2a"/>`,
         front: `<path d="M41 55q9-5 18 0q-9 3-18 0z" fill="#7a4a2a"/>` }
 };
@@ -1308,7 +1312,8 @@ document.addEventListener('click', async e => {
       const f = fac(el.dataset.fac), n = S.lectures.filter(l => l.facultyId === f.id).length;
       if (n) { toast(`${f.name}には${n}本の講義があります。先に講義を別の学部へ移してください`, { ms: 5000 }); break; }
       if (!(await ask(`${f.name}を廃止しますか？`, { ok: '廃止する', danger: true }))) break;
-      S.faculties = S.faculties.filter(x => x.id !== f.id); await save.faculties(); closeSheet(); go('home'); break;
+      S.faculties = S.faculties.filter(x => x.id !== f.id); await save.faculties();
+      S.settings.removedFac = [...(S.settings.removedFac || []), f.id]; save.settings(); closeSheet(); go('home'); break;
     }
     case 'writefor': S.studioTab = 'write'; S.draft = { ...(S.draft || {}), editId: null, facultyId: el.dataset.fac, title: '', script: '', professor: '', series: '', episode: '', description: '' }; go('studio'); break;
     case 'stab': S.studioTab = el.dataset.tab; render(); break;
@@ -1419,6 +1424,10 @@ async function boot() {
   const [lectures, notes, faculties, progress, logs, settings, seeded] = await Promise.all([
     DB.all('lectures'), DB.all('notes'), DB.get('kv', 'faculties'), DB.get('kv', 'progress'), DB.get('kv', 'logs'), DB.get('kv', 'settings'), DB.get('kv', 'seeded')]);
   S.faculties = faculties || SEED.faculties.map(f => ({ ...f }));
+  // 新しく増えた学部を、既存のユーザーにも追加する（自分で廃止した学部は戻さない）
+  const removed = (settings && settings.removedFac) || [];
+  const added = SEED.faculties.filter(f => !S.faculties.some(x => x.id === f.id) && !removed.includes(f.id));
+  if (faculties && added.length) { S.faculties.push(...added.map(f => ({ ...f }))); await save.faculties(); }
   S.settings = { ...DEFAULTS, ...(settings || {}) };
   if (!S.settings.studentNo) { S.settings.studentNo = `AIRU-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`; save.settings(); }
   S.lectures = lectures; S.notes = notes; S.progress = progress || {}; S.logs = logs || {};

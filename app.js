@@ -86,7 +86,7 @@ const DB = {
 };
 
 /* ================= 状態 ================= */
-const DEFAULTS = { theme: 'auto', announcer: true, chime: true, back: 15, fwd: 30, rate: 1, voiceURI: '', enrolled: dayKey(), studentNo: '' };
+const DEFAULTS = { quickImport: true, theme: 'auto', announcer: true, chime: true, back: 15, fwd: 30, rate: 1, voiceURI: '', enrolled: dayKey(), studentNo: '' };
 const S = {
   lectures: [], faculties: [], progress: {}, notes: [], logs: {}, settings: { ...DEFAULTS },
   view: 'home', facultyView: null, libQuery: '', libFac: 'all', libStatus: 'all', studioTab: 'import', pending: [],
@@ -717,6 +717,7 @@ function studioImport() {
       <input type="file" id="fileIn" accept="audio/*,.mp3,.m4a,.wav,.ogg,.aac" multiple hidden></label>
     <div class="card"><h3 style="margin-bottom:6px">ファイル名のコツ</h3>
       <p class="hint">ファイル名を <code>学部_タイトル_第1回.mp3</code> の形にすると、学部・タイトル・回数を自動で読み取ります。<br>例：<code>宇宙_ブラックホール入門_第2回.mp3</code>　<code>【哲学】ニーチェと永劫回帰.mp3</code></p></div>
+    <p class="hint">iPhoneなら「ファイル」の選択画面で OneDrive（または iCloud Drive）の講義フォルダを開き、右上の「選択」から全部選んでください。登録済みの講義は自動で飛ばします。</p>
     <p class="hint">音声はこの端末のブラウザ内（IndexedDB）に保存され、どこにもアップロードされません。設定画面から「データを消さないよう端末に依頼」しておくと安心です。</p>
   </div>`;
 }
@@ -840,15 +841,32 @@ function audioDuration(file) {
     setTimeout(() => fin(0), 10000); a.src = u;
   });
 }
+/* 同じファイル名の講義は「同じなら飛ばす／作り直されていたら差し替える」。
+   すぐ登録モードなら確認画面を出さずにそのまま登録する（フォルダの中身を全部選ぶだけでOK）。 */
 async function addFiles(files) {
   files = files.filter(f => /^audio\//.test(f.type) || /\.(mp3|m4a|wav|ogg|aac|flac)$/i.test(f.name));
   if (!files.length) { toast('音声ファイルが見つかりませんでした'); return; }
-  for (const file of files) S.pending.push({ file, ...parseName(file.name), professor: '', duration: 0 });
-  refreshStudio();
-  for (const p of S.pending) if (!p.duration) { p.duration = await audioDuration(p.file); }
-  refreshStudio();
+  const known = new Map(S.lectures.filter(l => l.fileName).map(l => [l.fileName, l]));
+  let same = 0, updated = 0; const fresh = [];
+  for (const file of files) {
+    const old = known.get(file.name);
+    if (!old) { fresh.push(file); continue; }
+    if (old.size === file.size) { same++; continue; }
+    try {
+      await DB.put('blobs', file, old.id);
+      Object.assign(old, { size: file.size, duration: await audioDuration(file) || old.duration, updatedAt: Date.now() });
+      await DB.put('lectures', old); updated++;
+      if (Player.cur && Player.cur.id === old.id) toast('再生中の講義が新しい音声に差し替わりました。次に再生したときから反映されます');
+    } catch (e) { toast('差し替えに失敗しました：' + file.name); }
+  }
+  for (const file of fresh) S.pending.push({ file, ...parseName(file.name), professor: '', duration: 0 });
+  for (const p of S.pending) if (!p.duration) p.duration = await audioDuration(p.file);
+  const parts = [fresh.length && `新しく${fresh.length}本`, updated && `作り直し${updated}本を差し替え`, same && `登録済み${same}本は飛ばしました`].filter(Boolean);
+  if (S.settings.quickImport && fresh.length) { await savePending(parts.join('、')); return; }
+  if (!fresh.length) { toast(parts.join('、') || '新しい講義はありませんでした'); render(true); return; }
+  refreshStudio(); if (parts.length > 1) toast(parts.join('、'));
 }
-async function savePending() {
+async function savePending(summary) {
   const btn = $('#savePend'); if (btn) { btn.disabled = true; btn.textContent = '保存しています…'; }
   let n = 0;
   try {
@@ -862,7 +880,7 @@ async function savePending() {
     toast('保存に失敗しました。端末の空き容量を確認してください（' + (e?.name || e) + '）', { ms: 6000 });
   }
   S.pending = S.pending.slice(n);
-  toast(`${n}本の講義を登録しました`);
+  toast(summary ? `${summary}。登録しました` : `${n}本の講義を登録しました`, { ms: 5000 });
   if (!S.pending.length) { S.libFac = 'all'; S.libStatus = 'all'; S.libQuery = ''; go('library'); } else refreshStudio();
 }
 
@@ -933,6 +951,10 @@ function viewPrefs() {
     <div class="field"><label for="pVoice">音声合成の声</label><select class="input" id="pVoice" data-set="voiceURI"><option value="">自動で選ぶ</option>${voices.map(v => `<option value="${esc(v.voiceURI)}" ${S.settings.voiceURI === v.voiceURI ? 'selected' : ''}>${esc(v.name)}</option>`).join('')}</select>
       <span class="hint">${Voice.ok ? (voices.length ? `日本語の声が${voices.length}種類あります。` : '日本語の声が見つかりません。端末の設定で日本語の読み上げ音声を追加してください。') : 'この端末は音声合成に対応していません。'}</span></div>
     <button class="btn" data-act="testvoice">声を試す</button>
+  </section>
+  <section class="card form"><h3>講義の追加</h3>
+    <div class="field"><label for="pQuick">MP3を選んだとき</label><select class="input" id="pQuick" data-set="quickImport"><option value="1" ${S.settings.quickImport ? 'selected' : ''}>すぐ登録する（ファイル名から自動で振り分け）</option><option value="0" ${!S.settings.quickImport ? 'selected' : ''}>確認画面で内容を直してから登録する</option></select>
+      <span class="hint">フォルダのMP3を全部選んでも大丈夫です。登録済みのものは飛ばし、作り直されたものは差し替えます。</span></div>
   </section>
   <section class="card form"><h3>表示</h3>
     <div class="field"><label for="pTheme">テーマ</label><select class="input" id="pTheme" data-set="theme">${[['auto', '端末に合わせる'], ['dark', '夜の講堂（ダーク）'], ['light', '昼の講堂（ライト）']].map(([v, n]) => `<option value="${v}" ${S.settings.theme === v ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
@@ -1266,7 +1288,7 @@ document.addEventListener('change', e => {
   const k = e.target.dataset.set;
   if (k) {
     let v = e.target.value;
-    if (['back', 'fwd'].includes(k)) v = +v; if (['announcer', 'chime'].includes(k)) v = v === '1';
+    if (['back', 'fwd'].includes(k)) v = +v; if (['announcer', 'chime', 'quickImport'].includes(k)) v = v === '1';
     S.settings[k] = v; save.settings(); if (k === 'theme') applyTheme(); toast('設定を保存しました');
   }
   if (e.target.id === 'importIn' && e.target.files[0]) importData(e.target.files[0]);

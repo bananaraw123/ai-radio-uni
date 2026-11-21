@@ -569,49 +569,39 @@ function viewHome() {
   const today = S.logs[dayKey()] || 0, cr = credits(), sk = streak();
   const doing = S.lectures.filter(l => status(l) === 'doing').sort((a, b) => (prog(b.id).last || 0) - (prog(a.id).last || 0))[0];
   const fresh = S.lectures.filter(l => status(l) === 'new' && (!doing || l.id !== doing.id));
-  const first = fresh.length ? fresh[hashStr(dayKey()) % fresh.length] : null;
-  // ふだん聴かない学部から：修了数が最も少ない学部の未聴講
-  const facCount = id => S.lectures.filter(l => l.facultyId === id && prog(l.id).plays).length;
-  const rare = fresh.filter(l => !first || l.id !== first.id).sort((a, b) => facCount(a.facultyId) - facCount(b.facultyId) || hashStr(a.id + dayKey()) - hashStr(b.id + dayKey()))[0];
-  const recent = S.lectures.slice().sort((a, b) => b.addedAt - a.addedAt).slice(0, 4);
+  const pick = fresh.length ? fresh[hashStr(dayKey()) % fresh.length] : null;
+  const recent = S.lectures.slice().sort((a, b) => b.addedAt - a.addedAt).filter(l => !pick || l.id !== pick.id).slice(0, 3);
+  const unheard = S.lectures.filter(l => status(l) !== 'done').length;
+  const hero = doing
+    ? `<button class="hero-card" data-act="play" data-id="${doing.id}">${sealHTML(fac(doing.facultyId), 'lg')}
+        <span class="hc-main"><span class="hc-label">続きから</span><span class="hc-title">${esc(doing.title)}</span>
+        <span class="hc-sub">${esc(profName(doing))} · 残り ${fmt(lectDuration(doing) * (1 - lectPct(doing)))}</span>
+        <span class="bar"><i style="width:${lectPct(doing) * 100}%"></i></span></span><span class="hero-play" aria-hidden="true">${ICON.play}</span></button>`
+    : `<button class="hero-card" id="heroRadio" data-act="radio" data-fac="all"><span class="seal lg" style="--c:var(--accent);color:var(--accent-ink)" aria-hidden="true">放</span>
+        <span class="hc-main"><span class="hc-label">ラジオを始める</span><span class="hc-title" id="heroTitle">全学部から、自動で番組を組みます</span>
+        <span class="hc-sub" id="heroSub">${S.lectures.length}講義（未聴講 ${unheard}）</span></span><span class="hero-play" aria-hidden="true">${ICON.play}</span></button>`;
   return `
-  <section class="greet">
+  <section class="home-hero">
     <p class="eyebrow">${new Date().toLocaleDateString('ja-JP', { month: 'long', day: 'numeric', weekday: 'short' })}</p>
     <h1>${greeting()}、学長。</h1>
-    <div class="stats"><span><b>${Math.floor(today / 60)}</b>分 本日の聴講</span><span><b>${sk}</b>日 連続</span><span><b>${cr}</b>単位 取得</span></div>
+    ${hero}
+    <p class="home-stats">今日 <b class="num">${Math.floor(today / 60)}</b>分 ・ 連続 <b class="num">${sk}</b>日 ・ <b class="num">${cr}</b>単位</p>
   </section>
 
+  <section class="drive-row"><button class="dr-label" data-act="drive" aria-label="ドライブモード">${ICON.car}ドライブ</button>
+    ${MINUTE_CHOICES.filter(m => m >= 15).map(m => `<button class="dr-chip" data-act="plan" data-min="${m}"><b class="num">${m}</b>分</button>`).join('')}</section>
+
   <section class="tuner" aria-label="チューニングダイヤル">
-    <div class="tuner-head"><span class="eyebrow">Tuning · FM</span><span class="small muted">ダイヤルを回して学部を選ぶ</span></div>
+    <div class="tuner-head"><span class="eyebrow">局を選ぶ · FM</span><span class="small muted">ダイヤルを左右に</span></div>
     <div class="tuner-window"><div class="tuner-scale" id="tunerScale"><div class="pad"></div>
       ${stations().map(s => `<button class="station" data-act="tune" data-st="${s.id}"><span class="freq">${s.freq}</span><span class="st-name">${esc(s.short)}</span></button>`).join('')}
       <div class="pad"></div></div><div class="needle"></div></div>
     <div class="tuner-info" id="tunerInfo"></div>
   </section>
 
-  <section class="card stack"><div class="sec-head" style="margin:0"><h2>ドライブ番組</h2><span class="small muted">到着ちょうどに終わる番組表</span></div>
-    <p class="small muted">到着までの時間を選ぶと、ダイヤルで選んでいる局から講義を組みます。</p>
-    <div class="min-grid">${MINUTE_CHOICES.map(m => `<button class="min-btn ${lsGet('airu.mins', 25) === m ? 'on' : ''}" data-act="plan" data-min="${m}"><b class="num">${m}</b>分</button>`).join('')}</div></section>
+  ${pick ? `<section><div class="sec-head"><h2>今日のおすすめ</h2></div><div class="list">${rowHTML(pick)}</div></section>` : ''}
 
-  ${doing ? `<section><div class="sec-head"><h2>続きから</h2></div>
-    <button class="feature" data-act="play" data-id="${doing.id}">${sealHTML(fac(doing.facultyId), 'lg')}
-      <span class="f-main"><span class="eyebrow">${esc(fac(doing.facultyId).name)}</span><div class="f-title">${esc(doing.title)}</div>
-      <div class="f-sub">${esc(profName(doing))} · 残り ${fmt(lectDuration(doing) * (1 - lectPct(doing)))}</div><div class="bar"><i style="width:${lectPct(doing) * 100}%"></i></div></span>
-      <span class="play-fab" aria-hidden="true">${ICON.play}</span></button></section>` : ''}
-
-  ${first || rare ? `<section class="feature-grid">
-    ${first ? `<button class="mini-card" data-act="detail" data-id="${first.id}"><span class="eyebrow">本日の一限</span>${sealHTML(fac(first.facultyId), 'sm')}<span class="f-title">${esc(first.title)}</span><span class="small muted">${esc(fac(first.facultyId).name)} · ${fmt(lectDuration(first))}</span></button>` : ''}
-    ${rare ? `<button class="mini-card" data-act="detail" data-id="${rare.id}"><span class="eyebrow">知らない扉</span>${sealHTML(fac(rare.facultyId), 'sm')}<span class="f-title">${esc(rare.title)}</span><span class="small muted">ふだん聴かない${esc(fac(rare.facultyId).name)}から</span></button>` : ''}
-  </section>` : ''}
-
-  <section><div class="sec-head"><h2>学部</h2><button class="link" data-act="newfac">学部を新設</button></div>
-    <div class="fac-grid">${S.faculties.map(f => {
-      const ls = S.lectures.filter(l => l.facultyId === f.id), c = credits(f.id);
-      return `<button class="fac-card" data-act="faculty" data-fac="${f.id}">${sealHTML(f)}<span class="fc-main"><span class="fc-name">${esc(f.name)}</span>
-        <span class="fc-sub">${rankOf(c, FAC_RANKS).name} · ${c}/${ls.length} 修了</span><div class="bar"><i style="width:${ls.length ? c / ls.length * 100 : 0}%"></i></div></span></button>`;
-    }).join('')}</div></section>
-
-  <section><div class="sec-head"><h2>新しく届いた講義</h2><button class="link" data-act="go" data-go="library">すべて見る</button></div>
+  <section><div class="sec-head"><h2>新着</h2><button class="link" data-act="go" data-go="library">すべて見る</button></div>
     ${recent.length ? `<div class="list">${recent.map(l => rowHTML(l)).join('')}</div>` : emptyLib()}</section>`;
 }
 function emptyLib() {
@@ -635,17 +625,24 @@ function tunerInfo() {
   const st = stations().find(s => s.id === S.station) || stations()[0];
   const ls = S.lectures.filter(l => st.id === 'all' || l.facultyId === st.id);
   const unheard = ls.filter(l => status(l) !== 'done').length;
+  const hero = $('#heroRadio');
+  if (hero) { // 何も聴きかけていないときは、大きなボタンが選んだ局の放送になる
+    hero.dataset.fac = st.id;
+    $('#heroTitle').textContent = st.id === 'all' ? '全学部から、自動で番組を組みます' : `${st.name}の放送`;
+    $('#heroSub').textContent = `${st.freq} MHz · ${ls.length}講義（未聴講 ${unheard}）`;
+  }
   $('#tunerInfo').innerHTML = `<div class="ti-main"><div class="ti-name"><span class="num" style="color:var(--accent)">${st.freq}</span> ${esc(st.name)}</div>
-    <div class="ti-sub">${esc(st.sub)} · ${ls.length}講義（未修了 ${unheard}）</div></div>
-    <button class="play-fab" data-act="radio" data-fac="${st.id}" aria-label="${esc(st.name)}を聴く">${ICON.play}</button>`;
+    <div class="ti-sub">${esc(st.sub)} · ${ls.length}講義</div></div>
+    ${hero ? '' : `<button class="btn ghost" style="min-height:38px" data-act="radio" data-fac="${st.id}">この局を聴く</button>`}`;
 }
 
 /* ---- 講義一覧 ---- */
 function viewLibrary() {
   return `<section class="stack">
-    <h1>講義を探す</h1>
+    <h1>講義</h1>
+    <div class="seal-strip">${S.faculties.map(f => `<button class="ss-item" data-act="faculty" data-fac="${f.id}">${sealHTML(f)}<span>${esc(f.short)}</span></button>`).join('')}
+      <button class="ss-item" data-act="newfac"><span class="seal" style="--c:var(--surface-2);color:var(--muted)" aria-hidden="true">＋</span><span>新設</span></button></div>
     <label class="search">${ICON.search}<input id="libQ" type="search" placeholder="タイトル・教授・タグで検索" value="${esc(S.libQuery)}" autocomplete="off"></label>
-    <div class="chips" id="libFac">${[['all', 'すべての学部'], ...S.faculties.map(f => [f.id, f.short])].map(([id, n]) => `<button class="chip ${S.libFac === id ? 'on' : ''}" data-f="${id}">${esc(n)}</button>`).join('')}</div>
     <div class="chips" id="libSt">${[['all', 'すべて'], ['new', '未聴講'], ['doing', '聴講中'], ['done', '修了'], ['audio', 'MP3'], ['script', '音声合成']].map(([id, n]) => `<button class="chip ${S.libStatus === id ? 'on' : ''}" data-s="${id}">${n}</button>`).join('')}</div>
   </section>
   <section id="libList"></section>`;
@@ -662,7 +659,7 @@ function bindLibrary() {
       : (S.lectures.length ? `<div class="card empty"><span class="em-title">該当する講義がありません</span><span class="small">検索語や絞り込みを変えてみてください。</span></div>` : emptyLib());
   };
   $('#libQ').addEventListener('input', e => { S.libQuery = e.target.value; draw(); });
-  $('#libFac').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; S.libFac = b.dataset.f; $$('#libFac .chip').forEach(c => c.classList.toggle('on', c === b)); draw(); });
+  $('#libFac')?.addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; S.libFac = b.dataset.f; $$('#libFac .chip').forEach(c => c.classList.toggle('on', c === b)); draw(); });
   $('#libSt').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; S.libStatus = b.dataset.s; $$('#libSt .chip').forEach(c => c.classList.toggle('on', c === b)); draw(); });
   draw();
 }
@@ -1098,6 +1095,7 @@ function updateProgressUI() {
 /* ---- ミニプレイヤー ---- */
 function renderMini() {
   const m = $('#mini'); const l = Player.cur;
+  m.hidden = !l; document.body.classList.toggle('no-mini', !l);
   if (!l) { m.innerHTML = `<button class="m-open" data-act="radio" data-fac="all"><span class="seal sm" style="--c:var(--accent);color:var(--accent-ink)">放</span><span class="m-main"><span class="m-title">AIラジオ大学 総合放送</span><span class="m-sub">タップで放送開始 · 全学部から自動編成</span></span></button><button class="m-btn main" data-act="radio" data-fac="all" aria-label="放送開始">${ICON.play}</button><button class="m-btn" data-act="drive" aria-label="ドライブモード">${ICON.car}</button>`; return; }
   const f = fac(l.facultyId);
   m.innerHTML = `<button class="m-open" data-act="fullplayer">${sealHTML(f, 'sm')}<span class="m-main"><span class="m-title">${esc(l.title)}</span><span class="m-sub">${Player.announcing ? 'ON AIR · 番組紹介中' : esc((Player.program ? `ドライブ番組 残り${programLeft()}分 · ` : '') + f.name + ' · ' + profName(l))}</span></span></button>

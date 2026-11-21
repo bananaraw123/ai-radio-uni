@@ -514,8 +514,8 @@ function programSheet(minutes, fid = S.station || 'all') {
   const body = plan.ids.length
     ? `<div class="list">${plan.ids.map(id => rowHTML(lect(id))).join('')}</div>`
     : `<div class="card empty"><span class="em-title">${minutes}分に収まる講義がありません</span><span class="small">時間を長くするか、ダイヤルで「総合」を選んでみてください。</span></div>`;
-  openSheet(`<div class="sheet-head"><div class="sh-main"><p class="eyebrow">Drive Program · ${esc(st.freq)} ${esc(st.short)}</p><h2>${minutes}分の番組</h2>
-    <p class="small muted">${plan.ids.length ? `${plan.ids.length}講義 · 約${fmt(plan.total)}（到着の${fmt(Math.max(0, minutes * 60 - plan.total))}前に終わります）` : ''}</p></div></div>
+  openSheet(`<div class="sheet-head"><div class="sh-main"><p class="eyebrow">Program · ${esc(st.freq)} ${esc(st.short)}</p><h2>${minutes}分の番組</h2>
+    <p class="small muted">${plan.ids.length ? `${plan.ids.length}講義 · 約${fmt(plan.total)}（予定より${fmt(Math.max(0, minutes * 60 - plan.total))}早く終わります）` : ''}</p></div></div>
     ${plan.ids.length && minutes * 60 - plan.total > 180 ? `<p class="hint">登録されている講義では${minutes}分を埋めきれませんでした。講義を増やすと、ぴったりに近づきます。</p>` : ''}
     ${body}
     ${plan.ids.length ? `<div class="btn-row"><button class="btn primary" data-act="startprog" data-min="${minutes}" data-fac="${fid}" data-ids="${plan.ids.join(',')}" data-drive="1">${ICON.car}ドライブモードで開始</button>
